@@ -5,8 +5,8 @@ from clarifai_grpc.channel.clarifai_channel import ClarifaiChannel
 from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
 from clarifai_grpc.grpc.api.status import status_pb2, status_code_pb2
 
-TELEGRAM_KEY = os.environ["TELEGRAM_KEY"]
-TELEGRAM_URL = "https://api.telegram.org/bot" + TELEGRAM_KEY
+# TELEGRAM_KEY = os.environ["TELEGRAM_KEY"]
+# TELEGRAM_URL = "https://api.telegram.org/bot" + TELEGRAM_KEY
 
 TABLEVISION_API = os.environ["TABLEVISION_API"]
 
@@ -107,10 +107,10 @@ while (vid_capture):
     try:
         if table_has_people:
             try:
-                msg = "PEOPLE DETECTED, confidence:" + str(concept.value)
+                # msg = "PEOPLE DETECTED, confidence:" + str(concept.value)
                 tablevision_api_response = requests.put(TABLEVISION_API + "/15?state=2")
-                response = requests.get(TELEGRAM_URL + msg)
-                print("Telegram response:" + str(response))
+                # response = requests.get(TELEGRAM_URL + msg)
+                # print("Telegram response:" + str(response))
             except Exception as e:
                 raise
         elif table_has_crockeries and not table_has_people:
