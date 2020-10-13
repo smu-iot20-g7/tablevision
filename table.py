@@ -1,5 +1,9 @@
 from datetime import datetime
 import uuid
+from mongoengine import connect
+from models import *
+
+connect("iot", host="mongodb+srv://root:0NqePorN2WDm7xYc@cluster0.fvp4p.mongodb.net/iot?retryWrites=true&w=majority")
 
 class Table:
     table_id = None
@@ -22,23 +26,46 @@ class Table:
     def end_session(self):
         time_now = datetime.now()
         self.session_end = time_now
-        self.states.append('A')
+        self.states.append(0)
 
-    def update_db(self, session=""):
-        if session == "":
+    def reset_session(self):
+        self.table_id = None
+        self.session_id = None
+        self.session_start = None
+        self.session_end = None
+        self.states = []
+
+    def update_db(self, session_status=""):
+        session = Session.objects.get(sessionId=self.session_id)
+        if session_status == "":
             # pull the current session with uuid
             # update just the state, replace entire list
-            
+            current_states = self.states
+            session.update(set__states=current_states)
             return
 
-        if session == "start":
+        if session_status == "start":
             # update a new object 
+            session = Session(
+                sessionId = self.session_id,
+                sessionStart = self.session_start,
+                sessionEnd = self.session_end,
+                states = self.states,
+                tableId = self.tableId
+            )
+            test = session.save()
+
+            print("CHECK HERE: ====" + test)
 
             return
 
-        if session == "end":
+        if session_status == "end":
             # pull the current session with uuid
             # add session_end, replace list
+
+            session = Session.objects.get(sessionId=self.session_id)
+            current_states = self.states
+            session.update(set__states=current_states, set__sessionEnd = self.sessionEnd)
 
             return
         
@@ -51,14 +78,14 @@ class Table:
         if new_state != last_state:
 
             # A to XX
-            if last_state == 'A':
-                self.start_session(state)
+            if last_state == 0:
+                self.start_session(new_state)
                 self.update_db('start')
             
             # not A to XX
             else:
                 # XX to A
-                if new_state == 'A':
+                if new_state == 0:
                     self.end_session()
                     self.update_db('end')
 
@@ -67,16 +94,5 @@ class Table:
                     self.states.append(new_state)
                     self.update_db()
 
-
-                
-
-            
-
-
-
-
-        
-
-
-
-    
+    def print_states(self):
+        return self.session_id, self.session_start, self.session_end, self.states
