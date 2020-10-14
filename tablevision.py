@@ -4,6 +4,7 @@ import cv2
 from clarifai_grpc.channel.clarifai_channel import ClarifaiChannel
 from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
 from clarifai_grpc.grpc.api.status import status_pb2, status_code_pb2
+from table import Table
 
 # TELEGRAM_KEY = os.environ["TELEGRAM_KEY"]
 # TELEGRAM_URL = "https://api.telegram.org/bot" + TELEGRAM_KEY
@@ -28,6 +29,7 @@ MODEL = "aaa03c23b3724a16a56b629203edc62c"
 
 try:
     video_capture = cv2.VideoCapture("http://" + os.environ["PI_IPV4"] + ":9090/stream/video.mjpeg")
+    table_15 = Table(15)
 except:
     sys.exit()
 
@@ -61,6 +63,7 @@ while (vid_capture):
     
     # converts image buffer from memory to bytes
     image_frame = buffer.tobytes()
+    
 
     # use the image_frame to send to
     # Clarifai API using gRPC
@@ -106,21 +109,27 @@ while (vid_capture):
 
     try:
         if table_has_people:
+            # State 2
             try:
                 # msg = "PEOPLE DETECTED, confidence:" + str(concept.value)
                 tablevision_api_response = requests.put(TABLEVISION_API + "/15?state=2")
+                table_15.did_change_state(2)
                 # response = requests.get(TELEGRAM_URL + msg)
                 # print("Telegram response:" + str(response))
             except Exception as e:
                 raise
         elif table_has_crockeries and not table_has_people:
+            # State 1
             try:
                 tablevision_api_response = requests.put(TABLEVISION_API + "/15?state=1")
+                table_15.did_change_state(1)
             except Exception as e:
                 raise
         else:
+            # State 0
             try:
                 tablevision_api_response = requests.put(TABLEVISION_API + "/15?state=0")
+                table_15.did_change_state(0)
             except Exception as e:
                 raise
     except Exception as e:

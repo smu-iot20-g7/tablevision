@@ -36,10 +36,10 @@ class Table:
         self.states = []
 
     def update_db(self, session_status=""):
-        session = Session.objects.get(sessionId=self.session_id)
         if session_status == "":
             # pull the current session with uuid
             # update just the state, replace entire list
+            session = Session.objects.get(sessionId=self.session_id)
             current_states = self.states
             session.update(set__states=current_states)
             return
@@ -51,22 +51,19 @@ class Table:
                 sessionStart = self.session_start,
                 sessionEnd = self.session_end,
                 states = self.states,
-                tableId = self.tableId
+                tableId = self.table_id
             )
             test = session.save()
-
-            print("CHECK HERE: ====" + test)
 
             return
 
         if session_status == "end":
             # pull the current session with uuid
             # add session_end, replace list
-
             session = Session.objects.get(sessionId=self.session_id)
             current_states = self.states
-            session.update(set__states=current_states, set__sessionEnd = self.sessionEnd)
-
+            session.update(set__states=current_states, set__sessionEnd = self.session_end)
+            self.reset_session()
             return
         
         return
