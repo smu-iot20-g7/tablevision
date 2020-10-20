@@ -1,5 +1,5 @@
 import sys, time, os, base64, requests
-from datetime import datetime
+from datetime import datetime, time
 import cv2
 from clarifai_grpc.channel.clarifai_channel import ClarifaiChannel
 from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
@@ -49,8 +49,23 @@ def hasCrockeries(crockeries_predictor):
         return True
     return False
 
+# Check if within operation
+def is_within_operating_hours(start, end, now=None):
+    # If check time is not given, default to current UTC time
+    now = now or datetime.now().time()
+
+    if start < end:
+        return now >= start and now <= end
+    else: # crosses midnight
+        return now >= start or now <= end
+
 while (vid_capture):
-    # Capture frame-by-frame
+    # Check if within operation
+    if not(is_within_operating_hours(time(6, 00), time(20, 00))):
+        time.sleep(1)
+        continue
+
+     # Capture frame-by-frame
     vid_capture, frame = video_capture.read()
     # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
