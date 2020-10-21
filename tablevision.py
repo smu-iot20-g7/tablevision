@@ -11,7 +11,8 @@ HAWKER_ITEMS_DICTIONARY = [
     "Cutlery",
     "Tray",
     "Plate",
-    "Teapot"
+    "Teapot",
+    "Drinks"
 ]
 
 def refreshToken():
