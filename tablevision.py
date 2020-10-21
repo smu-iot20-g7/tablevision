@@ -9,7 +9,9 @@ HAWKER_ITEMS_DICTIONARY = [
     "Food",
     "Saucer",
     "Cutlery",
-    "Tray"
+    "Tray",
+    "Plate",
+    "Teapot"
 ]
 
 def refreshToken():
@@ -46,14 +48,15 @@ def categoriseObjects(object_annotations):
     }
     
     for prediction in object_annotations:
-        print(prediction)
+        formatted_prediction = resultFormatter(prediction)
+        print(formatted_prediction)
         if hasPeople(prediction):
             states_tracker["has_people"] = True
-            location_of_objects["people"].append(resultFormatter(prediction))
+            location_of_objects["people"].append(formatted_prediction)
         
         if hasCrockeries(prediction):
             states_tracker["has_crockeries"] = True
-            location_of_objects["crockeries"].append(resultFormatter(prediction))
+            location_of_objects["crockeries"].append(formatted_prediction)
 
     return states_tracker, location_of_objects
 
