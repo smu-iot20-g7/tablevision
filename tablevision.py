@@ -1,50 +1,26 @@
-import sys, time, os, base64, requests
-from datetime import datetime, time
-import cv2
-from clarifai_grpc.channel.clarifai_channel import ClarifaiChannel
-from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
-from clarifai_grpc.grpc.api.status import status_pb2, status_code_pb2
-from table import Table
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time, datetime, json, base64, requests, os
+from io import BytesIO
 
-# TELEGRAM_KEY = os.environ["TELEGRAM_KEY"]
-# TELEGRAM_URL = "https://api.telegram.org/bot" + TELEGRAM_KEY
+def refreshToken():
+    stream = os.popen("gcloud auth application-default print-access-token")
+    return stream.read().strip().replace("\n", "")
 
-TABLEVISION_API = os.environ["TABLEVISION_API"]
+def hasPeople(object_annotations):
+    locations = []
+    for prediction in object_annotations:
+        print(prediction)
+        if prediction['name'] == "Person" and prediction['score'] > 0.84:
+            locations.append(prediction)
 
-# ======================================
-# Clarifai Setup
-# ======================================
-CLARIFAI_SECRET = os.environ["CLARIFAI_SECRET"]
-channel = ClarifaiChannel.get_json_channel()
-stub = service_pb2_grpc.V2Stub(channel)
-metadata = (("authorization", "Key " + CLARIFAI_SECRET),)
+    if len(locations) > 0:
+        return True, locations
 
-# training model
-# currently set to: general model
-MODEL = "aaa03c23b3724a16a56b629203edc62c"
+    return False, []
 
-# ======================================
-# Code begins
-# ======================================
 
-try:
-    video_capture = cv2.VideoCapture("http://" + os.environ["PI_IPV4"] + ":9090/stream/video.mjpeg")
-    table_15 = Table(15)
-except:
-    sys.exit()
-
-# check if video is working;
-# vid_capture is a boolean if any 
-# video frames can be read
-vid_capture, frame = video_capture.read()
-
-def hasPeople(people_predictor):
-    if people_predictor["no person"] >= people_predictor["people"]:
-        return False
-    else:
-        return True
-
-def hasCrockeries(crockeries_predictor):
+def hasCrockeries(object_annotations):
     if len(crockeries_predictor) != 0:
         return True
     return False
@@ -53,103 +29,61 @@ def hasCrockeries(crockeries_predictor):
 def is_within_operating_hours(start, end, now=None):
     # If check time is not given, default to current UTC time
     now = now or datetime.now().time()
+    print(now)
 
     if start < end:
         return now >= start and now <= end
     else: # crosses midnight
         return now >= start or now <= end
 
-while (vid_capture):
-    # Check if within operation
-    if not(is_within_operating_hours(time(6, 00), time(20, 00))):
-        time.sleep(1)
-        continue
+GOOGLE_AUTH = refreshToken()
 
-     # Capture frame-by-frame
-    vid_capture, frame = video_capture.read()
-    # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
-    # Display the resulting frame in a new window in grayscale
-    # cv2.imshow("frame",gray)
-    # if cv2.waitKey(1) & 0xFF == ord('q'):
-    #     break
+# initialize the camera and grab a reference to the raw camera capture
+camera = PiCamera()
+# rawCapture = PiRGBArray(camera)
 
-    retval, buffer = cv2.imencode('.jpg', frame)
-    
-    # converts image buffer from memory to bytes
-    image_frame = buffer.tobytes()
-    
+# allow the camera to warmup
+time.sleep(0.1)
 
-    # use the image_frame to send to
-    # Clarifai API using gRPC
-    post_model_outputs_response = stub.PostModelOutputs(
-        service_pb2.PostModelOutputsRequest(
-            model_id=MODEL,
-            inputs=[
-                resources_pb2.Input(
-                    data=resources_pb2.Data(
-                        image=resources_pb2.Image(
-                            base64=image_frame
-                        )
-                    )
-                )
-            ]
-        ),
-        metadata=metadata
-    )
-    if post_model_outputs_response.status.code != status_code_pb2.SUCCESS:
-        raise Exception("Post model outputs failed, status: " + post_model_outputs_response.status.description)
+# grab an image from the camera
+# camera.capture(rawCapture, format="bgr")
+# image = rawCapture.array
+while True:
+    camera.capture("test.jpg")
+    image = "test.jpg"
+    image_64 = base64.b64encode(open(image, "rb").read()).decode("utf-8")
 
-    # Since we have one input, one output will exist here.
-    output = post_model_outputs_response.outputs[0]
-    prediction_results = output.data.concepts
+    r = {
+    "requests": [
+        {
+        "image": {
+            "content": str(image_64)
+        },
+        "features": [
+            {
+            "maxResults": 10,
+            "type": "OBJECT_LOCALIZATION"
+            },
+        ]
+        }
+    ]
+    }
 
-    people_predictor = {"people": 0.00, "no person": 0.00}
-    crockeries_predictor = {}
+    json_request = json.dumps(r)
 
-    for concept in prediction_results:
-        if concept.name == "no person" or concept.name == "people":
-            print("===================")
-            print("%s %.2f" % (concept.name, concept.value))
-            print("===================")
+    with open("key.json", "r") as key:
+        gcpk = key.read()
+        gcp_key = "Bearer " + gcpk.strip().replace("\n", "")
 
-            people_predictor[concept.name] = concept.value
+    headers = {"Authorization": "Bearer " + GOOGLE_AUTH, "Content-Type": "application/json; charset=utf-8"}
+    response = requests.post("https://vision.googleapis.com/v1/images:annotate", headers=headers, data=json_request)
 
-        if (concept.name == "food" or concept.name == "tableware" or concept.name == "cutlery") and concept.value > 0.85:
-            crockeries_predictor[concept.name] = concept.value
+    object_annotations = []
 
-    
-    table_has_people = hasPeople(people_predictor)
-    table_has_crockeries = hasCrockeries(crockeries_predictor)
+    if response.ok:
+        object_annotations = json.loads(response.text)["responses"][0]["localizedObjectAnnotations"]
+        people_prediction = hasPeople(object_annotations)
+        if people_prediction[0]:
+            print(object_annotations)
+            print("HAS PEOPLE")
 
-    try:
-        if table_has_people:
-            # State 2
-            try:
-                # msg = "PEOPLE DETECTED, confidence:" + str(concept.value)
-                tablevision_api_response = requests.put(TABLEVISION_API + "/15?state=2")
-                table_15.did_change_state(2)
-                # response = requests.get(TELEGRAM_URL + msg)
-                # print("Telegram response:" + str(response))
-            except Exception as e:
-                raise
-        elif table_has_crockeries and not table_has_people:
-            # State 1
-            try:
-                tablevision_api_response = requests.put(TABLEVISION_API + "/15?state=1")
-                table_15.did_change_state(1)
-            except Exception as e:
-                raise
-        else:
-            # State 0
-            try:
-                tablevision_api_response = requests.put(TABLEVISION_API + "/15?state=0")
-                table_15.did_change_state(0)
-            except Exception as e:
-                raise
-    except Exception as e:
-        print("can't send to api, " + str(e))
-
-# When everything done, release the capture
-video_capture.release()
-cv2.destroyAllWindows()
