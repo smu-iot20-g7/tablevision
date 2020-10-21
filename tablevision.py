@@ -85,7 +85,7 @@ def checkRefreshToken():
     if (now - LAST_REFRESH).seconds >= 60:
         # try to check if its 30mins or just reach next hr
         # print("pass", (now - LAST_REFRESH).seconds)
-        if now_minute == 30 or now_minute == 15:
+        if now_minute == 30 or now_minute == 0:
             # refresh token
             print("refreshing token")
             stream = os.popen("gcloud auth application-default print-access-token")
@@ -107,7 +107,7 @@ time.sleep(0.1)
 
 while True:
 
-    if not(isWithinOperatingHours(dttime(6, 00), dttime(17, 17))):
+    if not(isWithinOperatingHours(dttime(6, 00), dttime(20, 00))):
         time.sleep(1)
         # print("not within operation liao")
         continue
