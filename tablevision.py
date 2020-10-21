@@ -1,6 +1,8 @@
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import json, base64, requests, os, time
+from datetime import datetime
+from datetime import time as dttime
 from io import BytesIO
 
 HAWKER_ITEMS_DICTIONARY = [
@@ -14,10 +16,6 @@ HAWKER_ITEMS_DICTIONARY = [
     "Teapot",
     "Drinks"
 ]
-
-def refreshToken():
-    stream = os.popen("gcloud auth application-default print-access-token")
-    return stream.read().strip().replace("\n", "")
 
 def hasPeople(prediction):
     if prediction['name'] == "Person" and prediction['score'] > 0.84:
@@ -65,19 +63,42 @@ def categoriseObjects(object_annotations):
 def isWithinOperatingHours(start, end, time_now=None):
     # If check time is not given, default to current UTC time
     time_now = time_now or datetime.now().time()
-    print(time_now)
 
     if start < end:
         return time_now >= start and time_now <= end
     else: # crosses midnight
         return time_now >= start or time_now <= end
 
+def refreshToken():
+    stream = os.popen("gcloud auth application-default print-access-token")
+    return stream.read().strip().replace("\n", "")
+
+def checkRefreshToken():
+    # Define global variable of GOOGLE_AUTH and LAST_REFRESH
+    global GOOGLE_AUTH
+    global LAST_REFRESH
+    
+    now = datetime.now()
+    now_minute = now.minute
+
+    # if not within the same minute 
+    if (now - LAST_REFRESH).seconds >= 60:
+        # try to check if its 30mins or just reach next hr
+        # print("pass", (now - LAST_REFRESH).seconds)
+        if now_minute == 30 or now_minute == 15:
+            # refresh token
+            print("refreshing token")
+            stream = os.popen("gcloud auth application-default print-access-token")
+            GOOGLE_AUTH = refreshToken()
+            LAST_REFRESH = now
+    
 ###############################
     # Main Application #
 ###############################
 
 # Fetch Google Authentication Token
 GOOGLE_AUTH = refreshToken()
+LAST_REFRESH = datetime.now()
 
 # Initialise the Raspi camera and create a variable to reference the raw camera capture
 camera = PiCamera()
@@ -86,9 +107,13 @@ time.sleep(0.1)
 
 while True:
 
-    # if not(isWithinOperatingHours(time(6, 00), time(20, 00))):
-    #     time.sleep(1)
-    #     continue
+    if not(isWithinOperatingHours(dttime(6, 00), dttime(17, 17))):
+        time.sleep(1)
+        # print("not within operation liao")
+        continue
+    
+    # Always check if there is a need to refresh token
+    checkRefreshToken()
 
     camera.capture("test.jpg")
     image = "test.jpg"
