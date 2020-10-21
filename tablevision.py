@@ -1,72 +1,109 @@
 from picamera.array import PiRGBArray
 from picamera import PiCamera
-import time, datetime, json, base64, requests, os
+import json, base64, requests, os, time
 from io import BytesIO
+
+HAWKER_ITEMS_DICTIONARY = [
+    "Coffee cup",
+    "Tableware",
+    "Food",
+    "Saucer",
+    "Cutlery",
+    "Tray"
+]
 
 def refreshToken():
     stream = os.popen("gcloud auth application-default print-access-token")
     return stream.read().strip().replace("\n", "")
 
-def hasPeople(object_annotations):
-    locations = []
-    for prediction in object_annotations:
-        print(prediction)
-        if prediction['name'] == "Person" and prediction['score'] > 0.84:
-            locations.append(prediction)
-
-    if len(locations) > 0:
-        return True, locations
-
-    return False, []
-
-
-def hasCrockeries(object_annotations):
-    if len(crockeries_predictor) != 0:
+def hasPeople(prediction):
+    if prediction['name'] == "Person" and prediction['score'] > 0.84:
         return True
     return False
 
-# Check if within operation
-def is_within_operating_hours(start, end, now=None):
+def hasCrockeries(prediction):
+    if prediction["name"] in HAWKER_ITEMS_DICTIONARY and prediction['score'] > 0.80:
+        return True
+    return False
+
+def resultFormatter(prediction):
+    return {
+        "name": prediction["name"],
+        "location_boundary": prediction["boundingPoly"]["normalizedVertices"],
+        "score": prediction["score"],
+        "mid": prediction["mid"]
+    }
+
+def categoriseObjects(object_annotations):
+    location_of_objects = {
+        "people": [], 
+        "crockeries": []
+    }
+
+    states_tracker = {
+        "has_people": False,
+        "has_crockeries": False
+    }
+    
+    for prediction in object_annotations:
+        print(prediction)
+        if hasPeople(prediction):
+            states_tracker["has_people"] = True
+            location_of_objects["people"].append(resultFormatter(prediction))
+        
+        if hasCrockeries(prediction):
+            states_tracker["has_crockeries"] = True
+            location_of_objects["crockeries"].append(resultFormatter(prediction))
+
+    return states_tracker, location_of_objects
+
+# Check if within operations
+def isWithinOperatingHours(start, end, time_now=None):
     # If check time is not given, default to current UTC time
-    now = now or datetime.now().time()
-    print(now)
+    time_now = time_now or datetime.now().time()
+    print(time_now)
 
     if start < end:
-        return now >= start and now <= end
+        return time_now >= start and time_now <= end
     else: # crosses midnight
-        return now >= start or now <= end
+        return time_now >= start or time_now <= end
 
+###############################
+    # Main Application #
+###############################
+
+# Fetch Google Authentication Token
 GOOGLE_AUTH = refreshToken()
 
-# initialize the camera and grab a reference to the raw camera capture
+# Initialise the Raspi camera and create a variable to reference the raw camera capture
 camera = PiCamera()
-# rawCapture = PiRGBArray(camera)
-
-# allow the camera to warmup
+# Allow the camera to warmup after initialising
 time.sleep(0.1)
 
-# grab an image from the camera
-# camera.capture(rawCapture, format="bgr")
-# image = rawCapture.array
 while True:
+
+    # if not(isWithinOperatingHours(time(6, 00), time(20, 00))):
+    #     time.sleep(1)
+    #     continue
+
     camera.capture("test.jpg")
     image = "test.jpg"
     image_64 = base64.b64encode(open(image, "rb").read()).decode("utf-8")
 
     r = {
-    "requests": [
-        {
-        "image": {
-            "content": str(image_64)
-        },
-        "features": [
+        "requests": [
             {
-            "maxResults": 10,
-            "type": "OBJECT_LOCALIZATION"
+            "image": {
+                "content": str(image_64)
             },
+            "features": [
+                {
+                "maxResults": 10,
+                "type": "OBJECT_LOCALIZATION"
+                },
+            ]
+            }
         ]
-        }
-    ]
     }
 
     json_request = json.dumps(r)
@@ -75,15 +112,26 @@ while True:
         gcpk = key.read()
         gcp_key = "Bearer " + gcpk.strip().replace("\n", "")
 
+    # Request headers
     headers = {"Authorization": "Bearer " + GOOGLE_AUTH, "Content-Type": "application/json; charset=utf-8"}
-    response = requests.post("https://vision.googleapis.com/v1/images:annotate", headers=headers, data=json_request)
 
-    object_annotations = []
+    try:
+        response = requests.post("https://vision.googleapis.com/v1/images:annotate", headers=headers, data=json_request)
 
-    if response.ok:
-        object_annotations = json.loads(response.text)["responses"][0]["localizedObjectAnnotations"]
-        people_prediction = hasPeople(object_annotations)
-        if people_prediction[0]:
-            print(object_annotations)
-            print("HAS PEOPLE")
+        object_annotations = []
 
+        if response.status_code == 200:
+            object_annotations = json.loads(response.text)["responses"][0]["localizedObjectAnnotations"]
+            categoriser = categoriseObjects(object_annotations)
+
+            states = categoriser[0]
+            location_of_objects = categoriser[1]
+
+            print("===========")
+            print(states)
+            print("===========")
+
+            #print(location_of_objects)
+
+    except Exception as e:
+        print("Some error occurred for Tablevision, error is: " + str(e))
