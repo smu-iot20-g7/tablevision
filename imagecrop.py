@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import matplotlib.widgets as widgets
+import json
 
 WIDTH = 0
 HEIGHT = 0
@@ -31,7 +32,7 @@ def runCropper():
 
         if want_to_continue != "Y":
             prompter = False
-            print(tables)
+            print(json.dumps(tables))
             print("Goodbye!")
 
 def onselect(eclick, erelease):
@@ -40,11 +41,11 @@ def onselect(eclick, erelease):
     if eclick.xdata>erelease.xdata:
         eclick.xdata,erelease.xdata=erelease.xdata,eclick.xdata
 
-    FIRST[0] = eclick.xdata 
-    FIRST[1] = eclick.ydata 
-    SECOND[0], SECOND[1] = erelease.xdata , eclick.ydata 
-    THIRD[0], THIRD[1] = eclick.xdata , erelease.ydata 
-    FOURTH[0], FOURTH[1] = erelease.xdata , erelease.ydata
+    FIRST[0] = eclick.xdata / WIDTH
+    FIRST[1] = eclick.ydata / HEIGHT
+    SECOND[0], SECOND[1] = erelease.xdata / WIDTH , eclick.ydata / HEIGHT
+    THIRD[0], THIRD[1] = eclick.xdata / WIDTH , erelease.ydata / HEIGHT
+    FOURTH[0], FOURTH[1] = erelease.xdata / WIDTH , erelease.ydata / HEIGHT
     plt.close()
 
 def imageCropper():
@@ -54,7 +55,7 @@ def imageCropper():
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    filename="test.jpg"
+    filename="testzx.jpg"
     im = Image.open(filename)
     arr = np.asarray(im)
     WIDTH, HEIGHT = im.size
