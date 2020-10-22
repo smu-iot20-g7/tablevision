@@ -32,7 +32,6 @@ class Table:
         self.states.append(0)
 
     def reset_session(self):
-        self.table_id = None
         self.session_id = None
         self.session_start = None
         self.session_end = None
