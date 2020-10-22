@@ -1,9 +1,29 @@
 from picamera.array import PiRGBArray
 from picamera import PiCamera
-import json, base64, requests, os, time
+import json, base64, requests, os, time, sys, json
 from datetime import datetime
 from datetime import time as dttime
 from io import BytesIO
+from table import Table
+
+TABLES = {}
+TABLE_NUMBERS = []
+
+LAST_REFRESH = datetime.now()
+
+try:
+    tables_json = json.loads(sys.argv[1])
+
+    for table_number in tables_json:
+        print(table_number)
+        curr_table = Table(table_number, tables_json[table_number])
+        TABLES[int(table_number)] = curr_table
+        TABLE_NUMBERS.append(int(table_number))
+        print(TABLE_NUMBERS)
+        print(TABLES[int(table_number)].print_states())
+except:
+    print("You forgot the table coordinates.")
+    exit
 
 HAWKER_ITEMS_DICTIONARY = [
     "Coffee cup",
@@ -28,11 +48,27 @@ def hasCrockeries(prediction):
     return False
 
 def resultFormatter(prediction):
+    locations = prediction["boundingPoly"]["normalizedVertices"]
+    x = []
+    y = []
+    for key in locations:
+        if 'x' not in key:
+            x.append(0)
+        else:
+            x.append(key["x"])
+        if 'y' not in key:
+            y.append(0)
+        else:
+            y.append(key["y"])
+
+    centre = {"x": (min(x) + max(x)) / 2, "y": (min(y) + max(y)) / 2}
+
     return {
         "name": prediction["name"],
-        "location_boundary": prediction["boundingPoly"]["normalizedVertices"],
+        "location_boundary": locations,
         "score": prediction["score"],
-        "mid": prediction["mid"]
+        "mid": prediction["mid"],
+        "centre_point": centre
     }
 
 def categoriseObjects(object_annotations):
@@ -41,23 +77,57 @@ def categoriseObjects(object_annotations):
         "crockeries": []
     }
 
-    states_tracker = {
-        "has_people": False,
-        "has_crockeries": False
-    }
-    
     for prediction in object_annotations:
         formatted_prediction = resultFormatter(prediction)
-        print(formatted_prediction)
-        if hasPeople(prediction):
-            states_tracker["has_people"] = True
-            location_of_objects["people"].append(formatted_prediction)
+        item_within_table, table_number = itemWithinTable(formatted_prediction)
         
-        if hasCrockeries(prediction):
-            states_tracker["has_crockeries"] = True
-            location_of_objects["crockeries"].append(formatted_prediction)
+        if item_within_table:
+            print("AA")
+            if hasPeople(formatted_prediction):
+                if table_number not in location_of_objects["people"]:
+                    location_of_objects["people"].append(table_number)
+            
+            if hasCrockeries(formatted_prediction):
+                if table_number not in location_of_objects["crockeries"]:
+                    location_of_objects["crockeries"].append(table_number)
 
-    return states_tracker, location_of_objects
+    return location_of_objects
+
+def itemWithinTable(formatted_prediction):
+    centre_x = formatted_prediction["centre_point"]["x"]
+    centre_y = formatted_prediction["centre_point"]["y"]
+
+    for table_number in TABLES:
+
+        table_object = TABLES[table_number]
+
+        if table_object.within_coordinates(centre_x, centre_y):
+            return True, table_number
+        
+    return False, ""
+
+def updateTable(location_of_objects):
+    print("checking of got append table number to LOO")
+    print(location_of_objects["people"])
+    print("checking of got append table number to LOC")
+    print(location_of_objects["crockeries"])
+
+    for table_number in TABLES:
+        if table_number in location_of_objects["people"]:
+            # state 2: has people
+            print("changing to 2")
+            the_table = TABLES[table_number].did_change_state(2)
+            TABLES[table_number].print_states()
+        elif table_number in location_of_objects["crockeries"] and table_number not in location_of_objects["people"]:
+            # state 1: has crockeries, no people
+            print("changing to 1")
+            the_table = TABLES[table_number].did_change_state(1)
+            TABLES[table_number].print_states()
+        else:
+            # state 0: nothing
+            print("changing to 0")
+            the_table = TABLES[table_number].did_change_state(0)
+            TABLES[table_number].print_states()
 
 # Check if within operations
 def isWithinOperatingHours(start, end, time_now=None):
@@ -98,7 +168,6 @@ def checkRefreshToken():
 
 # Fetch Google Authentication Token
 GOOGLE_AUTH = refreshToken()
-LAST_REFRESH = datetime.now()
 
 # Initialise the Raspi camera and create a variable to reference the raw camera capture
 camera = PiCamera()
@@ -107,10 +176,10 @@ time.sleep(0.1)
 
 while True:
 
-    if not(isWithinOperatingHours(dttime(6, 00), dttime(20, 00))):
-        time.sleep(1)
-        # print("not within operation liao")
-        continue
+    # if not(isWithinOperatingHours(dttime(6, 00), dttime(23, 55))):
+    #     time.sleep(1)
+    #     # print("not within operation liao")
+    #     continue
     
     # Always check if there is a need to refresh token
     checkRefreshToken()
@@ -150,17 +219,18 @@ while True:
         object_annotations = []
 
         if response.status_code == 200:
-            object_annotations = json.loads(response.text)["responses"][0]["localizedObjectAnnotations"]
-            categoriser = categoriseObjects(object_annotations)
-
-            states = categoriser[0]
-            location_of_objects = categoriser[1]
-
-            print("===========")
-            print(states)
-            print("===========")
-
-            #print(location_of_objects)
-
+            json_response = json.loads(response.text)["responses"][0]
+            print(json_response)
+            if json_response != {}:
+                object_annotations = json.loads(response.text)["responses"][0]["localizedObjectAnnotations"]
+                location_of_objects = categoriseObjects(object_annotations)
+                print("debugginginsidfnsiofhaioh=======")
+                print(location_of_objects)
+                try:
+                    updateTable(location_of_objects)
+                except Exception as e:
+                    raise
     except Exception as e:
-        print("Some error occurred for Tablevision, error is: " + str(e))
+        trace_back = sys.exc_info()[2]
+        line = trace_back.tb_lineno
+        print("Some error occurred for Tablevision, error is at " + str(line) + ": " + str(e))

@@ -11,10 +11,13 @@ class Table:
     session_start = None
     session_end = None
     states = []
+    coords = []
+    # coords = [TL, TR, BL, BR]
 
-    def __init__(self, table_id):
+    def __init__(self, table_id, coords):
         self.table_id = table_id
         self.states.append(0)
+        self.coords = coords
 
     def start_session(self, state):
         # create UUID
@@ -33,7 +36,7 @@ class Table:
         self.session_id = None
         self.session_start = None
         self.session_end = None
-        self.states = []
+        self.states = [0]
 
     def update_db(self, session_status=""):
         if session_status == "":
@@ -70,12 +73,17 @@ class Table:
         
 
     def did_change_state(self, new_state):
+        print("current state", self.print_states())
+        print("trying to change in table.py", new_state)
         last_state = self.states[-1]
 
         if new_state != last_state:
-
+            print("not the same state")
+            print(new_state)
+            print(last_state)
             # A to XX
             if last_state == 0:
+                print("A to XX")
                 self.start_session(new_state)
                 self.update_db('start')
             
@@ -83,13 +91,24 @@ class Table:
             else:
                 # XX to A
                 if new_state == 0:
+                    print("XX to A")
                     self.end_session()
                     self.update_db('end')
 
                 # XX to XX
                 else:
+                    print("XX to XX")
                     self.states.append(new_state)
                     self.update_db()
 
+    def within_coordinates(self, x, y):
+        bl_x, bl_y = self.coords[2][0], self.coords[2][1]
+        tr_x, tr_y = self.coords[1][0], self.coords[1][1]
+
+        if (x > bl_x and x < tr_x and y < bl_y and y > tr_y):
+            return True
+        else : 
+            return False
+
     def print_states(self):
-        return self.session_id, self.session_start, self.session_end, self.states
+        return self.table_id, self.session_id, self.session_start, self.session_end, self.states, self.coords
