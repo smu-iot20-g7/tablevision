@@ -3,4 +3,5 @@ mongoengine==0.20.0
 requests
 picamera
 PiRGBArray
-# Image
+Pillow==2.2.2
+dnspython==2.0.0
