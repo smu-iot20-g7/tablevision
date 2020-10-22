@@ -1,0 +1,31 @@
+service: iot-reminder-bot
+
+frameworkVersion: ">=1.2.0 <2.0.0"
+
+plugins:
+  - serverless-python-requirements
+
+provider:
+  name: aws
+  runtime: python3.6
+  timeout: 60
+  region: ap-southeast-1
+  environment:
+    TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+    DB_URI: ${env:DB_URI}
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+
+functions:
+  cron:
+    handler: handler.remind
+    events:
+      # Invoke Lambda function at 7:45 SGT every day
+      # - schedule: cron(0/10 * ? * MON-FRI *)
+    #   - schedule: cron(45 11 * * ? *)
+    #   - schedule: cron(0 * * * * *)
+    # cron(0 6-20 * * ? *) #every hour from 6am to 8pm
+      # - schedule: rate(3 minutes)
+      - schedule: cron(0 6-20 * * ? *) #every hour from 6am to 8pm
