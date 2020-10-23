@@ -12,14 +12,16 @@ TOKEN = os.environ['TELEGRAM_TOKEN']
 # connect("iot", host=os.environ['DB_URI'])
 
 def remind(event, context):
-    now = datetime.now() + timedelta(hours=8)
+    # Lambda Singapore is running GMT + 0
+    now = datetime.now()
+    now_singapore = now + timedelta(hours=8)
     print("timing now", now)
     bot = Bot(token=TOKEN)
     table_alive = False
     trayin_alive = False
     trayout_alive = False
 
-    # Tablevision
+    # Tablevision - Using GMT + 0 
     disconnect()
     connect("iot", host=os.environ['DB_URI'])
     sessions = Session.objects()
@@ -35,7 +37,7 @@ def remind(event, context):
     collection = db['tray_in']
     cursor = collection.find({})
     for document in cursor:
-        if (now - document['timestamp']).total_seconds() <= 3600:
+        if (now_singapore - document['timestamp']).total_seconds() <= 3600:
             print("tray in")
             print(document['timestamp'])
             trayin_alive = True
@@ -47,14 +49,14 @@ def remind(event, context):
     connect("fsr_rfid", host=os.environ['DB_URI'])
     collections = Collection.objects()
     for collection in collections:
-        if (now - collection.timestamp).total_seconds() <= 3600:
+        if (now_singapore - collection.timestamp).total_seconds() <= 3600:
             print("tray out")
             print(collection.timestamp)
             trayout_alive = True
             break
 
         
-    text = "<b>Health Check</b> - Team Hardcode\n\nTable Vision: {}\nTray In: {}\nTray Out: {}".format(get_emoji(table_alive), get_emoji(trayin_alive), get_emoji(trayout_alive))
+    text = "<b>Health Check - Team Hardcode</b>\n\nTable Vision: {}\nTray In: {}\nTray Out: {}".format(get_emoji(table_alive), get_emoji(trayin_alive), get_emoji(trayout_alive))
     bot.sendMessage(chat_id=GROUP_CHAT_ID, text=text, parse_mode='html')
     # bot.sendMessage(chat_id=GROUP_CHAT_ID, text="GG guys i think tablevision is broken gndahsdiasuhaiu")
 

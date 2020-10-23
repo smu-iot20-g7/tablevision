@@ -27,5 +27,5 @@ functions:
     #   - schedule: cron(45 11 * * ? *)
     #   - schedule: cron(0 * * * * *)
     # cron(0 6-20 * * ? *) #every hour from 6am to 8pm
-      # - schedule: rate(3 minutes)
-      - schedule: cron(0 6-20 * * ? *) #every hour from 6am to 8pm
+      # - schedule: rate(5 minutes)
+      - schedule: cron(0 22,0-12 * * ? *) #every hour from 6am to 8pm 
