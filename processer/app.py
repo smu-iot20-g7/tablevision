@@ -40,39 +40,39 @@ def initialise():
             table_object = tables_json[table_number]
             table_number = int(table_number)
             TABLES[table_number] = Table(table_id=table_number, coords=table_object)
-
+        
         print(TABLES)
-        return "table successfully set up", 200
-    except:
-        traceback.print_exc() 
-        return "unexpected error has occured", 400
-
-
+        return jsonify({"type": "success", "message": "Tables successfully set up"}), 200
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"type": "error", "message": "unexpected error has occured", "debug": str(e)}), 500
 
 @app.route('/process', methods=['POST'])
 def process():
-    data = request.get_json()
-    image64 = data['image64']
+    try:
+        data = request.get_json()
+        image64 = data['image64']
 
-    # decode the image back to image
-    image_data =  base64.b64decode(image64)
-    filename = "test.jpg"
-    with open(filename, 'wb') as f:
-        f.write(image_data) # save it to test.jpg
+        # decode the image back to image
+        image_data =  base64.b64decode(image64)
+        filename = "test.jpg"
+        with open(filename, 'wb') as f:
+            f.write(image_data) # save it to test.jpg
+        
+        # call the cloud vision and get response
+        objects = makeGoogleRequest(filename)
 
-    
-    # call the cloud vision and get response
-    objects = make_request_to_vision(filename)
+        # process the objects and update if got people or crockeries
+        location_of_objects = processPrediction(objects)
 
-    # process the objects and update if got people or crockeries
-    location_of_objects = process_and_update(objects)
+        # update table state liao
+        updateTable(location_of_objects)
 
-    # update table state liao
-    updateTable(location_of_objects)
+        return jsonify({"type": "success"}), 200
+    except Exception as e:
+        return jsonify({"type": "error", "debug": str(e)}), 500
 
-    return "", 200
-
-def make_request_to_vision(filename):
+def makeGoogleRequest(filename):
     client = vision.ImageAnnotatorClient()
     
     with open(filename, 'rb') as image_file:
@@ -84,14 +84,14 @@ def make_request_to_vision(filename):
     return client.object_localization(image=image).localized_object_annotations
 
 
-def process_and_update(objects):
+def processPrediction(predictions):
     location_of_objects = {
         "people": [], 
         "crockeries": []
     }
 
-    for object in objects:
-        formatted_object = resultFormatter(object)
+    for prediction in predictions:
+        formatted_object = resultFormatter(prediction)
 
         # boolean and table number
         item_within_table, table_number = itemWithinTable(formatted_object)
@@ -110,8 +110,8 @@ def process_and_update(objects):
 
     return location_of_objects
 
-def resultFormatter(object):
-    locations = object.bounding_poly.normalized_vertices
+def resultFormatter(prediction):
+    locations = prediction.bounding_poly.normalized_vertices
     x = []
     y = []
     
@@ -128,10 +128,10 @@ def resultFormatter(object):
     centre = {"x": (min(x) + max(x)) / 2, "y": (min(y) + max(y)) / 2}
 
     return {
-        "name": object.name,
+        "name": prediction.name,
         "location_boundary": locations,
-        "score": object.score,
-        "mid": object.mid,
+        "score": prediction.score,
+        "mid": prediction.mid,
         "centre_point": centre
     }
 
@@ -169,18 +169,15 @@ def updateTable(location_of_objects):
             TABLES[table_number].did_change_state(0)
             # TABLES[table_number].print_states()
 
-
-# object == prediction
-def hasPeople(object):
-    if object.name == "Person" and object.score > 0.84:
+def hasPeople(prediction):
+    if prediction.name == "Person" and prediction.score > 0.84:
         return True
     return False
 
-def hasCrockeries(object):
-    if object.name in HAWKER_ITEMS_DICTIONARY and object.score > 0.80:
+def hasCrockeries(prediction):
+    if prediction.name in HAWKER_ITEMS_DICTIONARY and prediction.score > 0.80:
         return True
     return False
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
