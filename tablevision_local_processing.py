@@ -224,7 +224,6 @@ while True:
             if json_response != {}:
                 object_annotations = json.loads(response.text)["responses"][0]["localizedObjectAnnotations"]
                 location_of_objects = categoriseObjects(object_annotations)
-                print("debugginginsidfnsiofhaioh=======")
                 print(location_of_objects)
                 try:
                     updateTable(location_of_objects)
