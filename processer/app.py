@@ -30,7 +30,6 @@ CORS(app)
 @app.route('/initialise', methods=['POST'])
 def initialise():
     # to be able to access the TABLES variable and add objects in
-    global TABLES
 
     data = request.get_json()
     tables_json = json.loads(data['tables_json'])
@@ -39,7 +38,7 @@ def initialise():
         for table_number in tables_json:
             table_object = tables_json[table_number]
             table_number = int(table_number)
-            TABLES[table_number] = Table(table_id=table_number, coords=table_object)
+            TABLES[table_number] = Table(table_number, table_object)
         
         print(TABLES)
         return jsonify({"type": "success", "message": "Tables successfully set up"}), 200
@@ -79,7 +78,6 @@ def deleteTables(table_id):
 
 @app.route("/tables", methods=["DELETE"])
 def deleteAllTables():
-    global TABLES
     try:
         TABLES = {}
         return jsonify({"type": "success", "message": "deleted all tables"}), 201
