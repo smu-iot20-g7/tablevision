@@ -47,6 +47,27 @@ def initialise():
         traceback.print_exc()
         return jsonify({"type": "error", "message": "unexpected error has occured", "debug": str(e)}), 500
 
+@app.route("/tables/coordinate/<int:table_id>", methods=["GET"])
+def getTableCoordinates(table_id):
+    try:
+        return jsonify({"type": "success", "table_requested": str(table_id), "table_coordinates": TABLES[table_id]}), 200
+    except Exception as e:
+        return jsonify({"type": "error", "debug": str(e)}), 500
+
+@app.route("/tables", methods=["GET"])
+def getTables():
+    if len(TABLES) == 0:
+        return jsonify({"type": "success", "message": "No tables found"}), 200
+    try:
+        all_tables = {}
+        for table in TABLES:
+            all_tables[table] = TABLES[table].print_states()
+        json_type = {"type": "success"}
+        all_tables.update(json_type)
+        return jsonify(all_tables), 200
+    except Exception as e:
+        return jsonify({"type": "error", "debug": str(e)}), 500
+
 @app.route('/process', methods=['POST'])
 def process():
     try:
