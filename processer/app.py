@@ -1,5 +1,5 @@
 import os, sys
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from datetime import datetime, timedelta
 from mongoengine import connect
@@ -26,6 +26,10 @@ TABLES = {}
 
 app = Flask(__name__)
 CORS(app)
+
+@app.route('/peek')
+def peek_image():
+    return render_template("index.html", user_image = '/static/image.jpg')
 
 @app.route('/initialise', methods=['POST'])
 def initialise():
@@ -96,6 +100,9 @@ def process():
         filename = "test.jpg"
         with open(filename, 'wb') as f:
             f.write(image_data) # save it to test.jpg
+
+        with open('/home/ubuntu/processer/static/image.jpg', 'wb') as f:
+            f.write(image_data) # save it to for rendering to image
         
         # call the cloud vision and get response
         predictions = makeGoogleRequest(filename)
