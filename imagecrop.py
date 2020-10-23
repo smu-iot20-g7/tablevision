@@ -55,7 +55,7 @@ def imageCropper():
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    filename="testzx.jpg"
+    filename="test.jpg"
     im = Image.open(filename)
     arr = np.asarray(im)
     WIDTH, HEIGHT = im.size
