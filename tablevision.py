@@ -27,7 +27,6 @@ process_endpoint = "http://18.139.111.67:5000/process"
 # Headers
 headers = {"content-type": "application/json"}
 while True:
-
     if not(isWithinOperatingHours(dttime(6, 00), dttime(20, 00))):
         time.sleep(1)
         # print("not within operation liao")
