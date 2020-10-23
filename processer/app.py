@@ -68,6 +68,25 @@ def getTables():
     except Exception as e:
         return jsonify({"type": "error", "debug": str(e)}), 500
 
+@app.route("/tables/<int:table_id>", methods=["DELETE"])
+def deleteTables(table_id):
+    try:
+        del TABLES[table_id]
+        return jsonify({"type": "success", "message": "deleted"}), 201
+    except Exception as e:
+        return jsonify({"type": "error", "debug": str(e)}), 500
+
+
+@app.route("/tables", methods=["DELETE"])
+def deleteAllTables():
+    global TABLES
+    try:
+        TABLES = {}
+        return jsonify({"type": "success", "message": "deleted all tables"}), 201
+    except Exception as e:
+        return jsonify({"type": "error", "debug": str(e)}), 500
+    
+
 @app.route('/process', methods=['POST'])
 def process():
     try:
@@ -81,10 +100,10 @@ def process():
             f.write(image_data) # save it to test.jpg
         
         # call the cloud vision and get response
-        objects = makeGoogleRequest(filename)
+        predictions = makeGoogleRequest(filename)
 
         # process the objects and update if got people or crockeries
-        location_of_objects = processPrediction(objects)
+        location_of_objects = processPrediction(predictions)
 
         # update table state liao
         updateTable(location_of_objects)
@@ -191,12 +210,12 @@ def updateTable(location_of_objects):
             # TABLES[table_number].print_states()
 
 def hasPeople(prediction):
-    if prediction.name == "Person" and prediction.score > 0.84:
+    if prediction["name"] == "Person" and prediction["score"] > 0.84:
         return True
     return False
 
 def hasCrockeries(prediction):
-    if prediction.name in HAWKER_ITEMS_DICTIONARY and prediction.score > 0.80:
+    if prediction["name"] in HAWKER_ITEMS_DICTIONARY and prediction["score"] > 0.80:
         return True
     return False
 
