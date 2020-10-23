@@ -42,5 +42,8 @@ while True:
 
     try:
         response = requests.post(process_endpoint, data=data, headers=headers)
+
+        if response.status_code != 200:
+            print(response.text)
     except:
         continue

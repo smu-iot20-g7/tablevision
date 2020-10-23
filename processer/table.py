@@ -10,13 +10,13 @@ class Table:
     session_id = None
     session_start = None
     session_end = None
-    states = []
+    states = None
     coords = []
     # coords = [TL, TR, BL, BR]
 
     def __init__(self, table_id, coords):
         self.table_id = table_id
-        self.states.append(0)
+        self.states = [0]
         self.coords = coords
 
     def start_session(self, state):
@@ -24,18 +24,22 @@ class Table:
         self.session_id = uuid.uuid4()
         time_now = datetime.now()
         self.session_start = time_now
+        print(self.states)
         self.states.append(state)
 
     def end_session(self):
         time_now = datetime.now()
         self.session_end = time_now
         self.states.append(0)
+        
+        print(self.states)
 
     def reset_session(self):
         self.session_id = None
         self.session_start = None
         self.session_end = None
         self.states = [0]
+        print(self.states)
 
     def update_db(self, session_status=""):
         if session_status == "":
@@ -55,7 +59,7 @@ class Table:
                 states = self.states,
                 tableId = self.table_id
             )
-            test = session.save()
+            session.save()
 
             return
 
