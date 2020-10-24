@@ -19,7 +19,8 @@ HAWKER_ITEMS_DICTIONARY = [
     "Tray",
     "Plate",
     "Teapot",
-    "Drinks"
+    "Drinks",
+    "Packaged goods"
 ]
 
 # initialise once pi has started
@@ -216,12 +217,12 @@ def updateTable(location_of_objects):
             # TABLES[table_number].print_states()
 
 def hasPeople(prediction):
-    if prediction["name"] == "Person" and prediction["score"] > 0.84:
+    if prediction["name"] == "Person" and prediction["score"] > 0.70:
         return True
     return False
 
 def hasCrockeries(prediction):
-    if prediction["name"] in HAWKER_ITEMS_DICTIONARY and prediction["score"] > 0.80:
+    if prediction["name"] in HAWKER_ITEMS_DICTIONARY and prediction["score"] > 0.50:
         return True
     return False
 
