@@ -30,7 +30,7 @@ app = Flask(__name__)
 CORS(app)
 
 @app.route('/peek')
-def peek_image():
+def peekImage():
     return render_template("index.html", user_image = '/static/image.jpg')
 
 @app.route('/initialise', methods=['POST'])
