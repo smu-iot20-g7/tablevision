@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 from mongoengine import connect
 from models import *
@@ -22,13 +22,13 @@ class Table:
     def start_session(self, state):
         # create UUID
         self.session_id = uuid.uuid4()
-        time_now = datetime.now()
+        time_now = datetime.now() + timedelta(hours=8)
         self.session_start = time_now
         print(self.states)
         self.states.append(state)
 
     def end_session(self):
-        time_now = datetime.now()
+        time_now = datetime.now() + timedelta(hours=8)
         self.session_end = time_now
         self.states.append(0)
         

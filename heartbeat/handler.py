@@ -21,12 +21,12 @@ def remind(event, context):
     trayin_alive = False
     trayout_alive = False
 
-    # Tablevision - Using GMT + 0 
+    # Tablevision - Using GMT + 8 (changed to 0 to 8 on 24 october 2pm)
     disconnect()
     connect("iot", host=os.environ['DB_URI'])
     sessions = Session.objects()
     for session in sessions:
-        if (now - session.sessionStart).total_seconds() <= 3600:
+        if (now_singapore - session.sessionStart).total_seconds() <= 3600:
             table_alive = True
             break
 
