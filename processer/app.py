@@ -8,6 +8,7 @@ from google.cloud import vision
 from table import Table
 import json
 import traceback
+import time
 
 HAWKER_ITEMS_DICTIONARY = [
     "Coffee cup",
@@ -97,7 +98,7 @@ def process():
 
         # decode the image back to image
         image_data =  base64.b64decode(image64)
-        filename = "test.jpg"
+        filename = '/home/ubuntu/images/' + time.strftime("%Y%m%d-%H%M%S") + '.jpg'
         with open(filename, 'wb') as f:
             f.write(image_data) # save it to test.jpg
 
