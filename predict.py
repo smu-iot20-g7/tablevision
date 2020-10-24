@@ -1,23 +1,42 @@
-from clarifai.rest import ClarifaiApp
-from clarifai.rest import Image as ClImage
+from google.cloud import automl
 
-app = ClarifaiApp(api_key='1cfca7acab65470db7585605e611ab5b')
+# TODO(developer): Uncomment and set the following variables
+# project_id = "YOUR_PROJECT_ID"
+# model_id = "YOUR_MODEL_ID"
+# file_path = "path_to_local_file.jpg"
 
-# Change the directory to your own directory
-model = app.models.get('table_tray')
+file_path = './model_test.jpg'
+project_id = 'iot-grp7-vision'
+model_id = 'IOD6111580407411507200'
 
+prediction_client = automl.PredictionServiceClient()
 
-# predicting
-filename = "C:/Users/ss47n/Desktop/model_training/p1.jpg"
-img = ClImage(filename=filename)
-response = model.predict([img])
+# Get the full path of the model.
+model_full_id = automl.AutoMlClient.model_path(
+    project_id, "us-central1", model_id
+)
 
-concepts = response['outputs'][0]['data']['concepts']
+# Read the file.
+with open(file_path, "rb") as content_file:
+    content = content_file.read()
 
-print(concepts[0]['name'])
-print(concepts[0]['value'])
-print(concepts[1]['name'])
-print(concepts[1]['value'])
-print()
-print('first value, larger than second value?')
-print(concepts[0]['value'] > concepts[1]['value'] )
+image = automl.Image(image_bytes=content)
+payload = automl.ExamplePayload(image=image)
+
+# params is additional domain-specific parameters.
+# score_threshold is used to filter the result
+# https://cloud.google.com/automl/docs/reference/rpc/google.cloud.automl.v1#predictrequest
+params = {"score_threshold": "0.8"}
+
+request = automl.PredictRequest(
+    name=model_full_id,
+    payload=payload,
+    params=params
+)
+response = prediction_client.predict(request=request)
+
+print("Prediction results:")
+for result in response.payload:
+    print("Predicted class name: {}".format(result.display_name))
+    print("Predicted class score: {}".format(result.image_object_detection.score))
+    print()
