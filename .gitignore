@@ -1,8 +1,4 @@
 .serverless*
 key.json
-__pycache__/table.cpython-38.pyc
-__pycache__/models.cpython-38.pyc
-.test.jpg.icloud
-processer/__pycache__/models.cpython-38.pyc
-processer/__pycache__/table.cpython-37.pyc
-processer/__pycache__/table.cpython-38.pyc
+*.icloud
+tablevision_processer/__pycache__/*
