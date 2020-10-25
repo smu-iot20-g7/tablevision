@@ -131,7 +131,7 @@ def makeGoogleRequest(image):
     # params is additional domain-specific parameters.
     # score_threshold is used to filter the result
     # https://cloud.google.com/automl/docs/reference/rpc/google.cloud.automl.v1#predictrequest
-    params = {"score_threshold": "0.8", "max_bounding_box_count": "4"}
+    params = {"score_threshold": "0.7"}
 
     request = automl.PredictRequest(
         name=model_full_id,
