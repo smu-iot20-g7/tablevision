@@ -1,9 +1,36 @@
 from google.cloud import automl
 
-# TODO(developer): Uncomment and set the following variables
-# project_id = "YOUR_PROJECT_ID"
-# model_id = "YOUR_MODEL_ID"
-# file_path = "path_to_local_file.jpg"
+
+
+def resultFormatter(prediction):
+    locations = prediction.image_object_detection.bounding_box.normalized_vertices
+
+    formatted_locations = []
+
+    for vertices in locations.__iter__():
+        formatted_locations.append({"x": vertices.x, "y": vertices.y})
+
+    x = []
+    y = []
+
+    for key in locations:
+        if 'x' not in key:
+            x.append(0)
+        else:
+            x.append(key.x)
+        if 'y' not in key:
+            y.append(0)
+        else:
+            y.append(key.y)
+
+    centre = {"x": (min(x) + max(x)) / 2, "y": (min(y) + max(y)) / 2}
+
+    return {
+        "name": prediction.display_name,
+        "location_boundary": formatted_locations,
+        "score": prediction.image_object_detection.score,
+        "centre_point": centre
+    }
 
 file_path = './model_test.jpg'
 project_id = 'iot-grp7-vision'
@@ -37,6 +64,5 @@ response = prediction_client.predict(request=request)
 
 print("Prediction results:")
 for result in response.payload:
-    print("Predicted class name: {}".format(result.display_name))
-    print("Predicted class score: {}".format(result.image_object_detection.score))
-    print()
+    # print("====")
+    print(resultFormatter(result))

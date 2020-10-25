@@ -5,3 +5,4 @@ picamera
 PiRGBArray
 Pillow==2.2.2
 dnspython==2.0.0
+google-cloud-automl
