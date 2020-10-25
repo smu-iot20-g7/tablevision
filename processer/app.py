@@ -4,23 +4,15 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 from mongoengine import connect
 import base64
-from google.cloud import vision
+from google.cloud import automl
 from table import Table
 import json
 import traceback
 import time
 
 HAWKER_ITEMS_DICTIONARY = [
-    "Coffee cup",
-    "Tableware",
-    "Food",
-    "Saucer",
-    "Cutlery",
     "Tray",
-    "Plate",
-    "Teapot",
-    "Drinks",
-    "Packaged goods"
+    "Crockeries"
 ]
 
 # initialise once pi has started
@@ -106,8 +98,13 @@ def process():
         with open('/home/ubuntu/processer/static/image.jpg', 'wb') as f:
             f.write(image_data) # save it to for rendering to image
         
-        # call the cloud vision and get response
-        predictions = makeGoogleRequest(filename)
+        ########## Call the Google AutoML API ##########
+
+        image = automl.Image(image_bytes=image_data)
+
+        predictions = makeGoogleRequest(image)
+        
+        ########## Ended calling the Google AutoML API ##########
 
         # process the objects and update if got people or crockeries
         location_of_objects = processPrediction(predictions)
@@ -119,16 +116,31 @@ def process():
     except Exception as e:
         return jsonify({"type": "error", "debug": str(e)}), 500
 
-def makeGoogleRequest(filename):
-    client = vision.ImageAnnotatorClient()
-    
-    with open(filename, 'rb') as image_file:
-        content = image_file.read()
+def makeGoogleRequest(image):
+    project_id = 'iot-grp7-vision'
+    model_id = 'IOD6111580407411507200'
 
-    image = vision.Image(content=content)
+    # Get the full path of the model.
+    model_full_id = automl.AutoMlClient.model_path(
+        project_id, "us-central1", model_id
+    )
 
-    # return objects
-    return client.object_localization(image=image).localized_object_annotations
+    prediction_client = automl.PredictionServiceClient()
+    payload = automl.ExamplePayload(image=image)
+
+    # params is additional domain-specific parameters.
+    # score_threshold is used to filter the result
+    # https://cloud.google.com/automl/docs/reference/rpc/google.cloud.automl.v1#predictrequest
+    params = {"score_threshold": "0.8", "max_bounding_box_count": "4"}
+
+    request = automl.PredictRequest(
+        name=model_full_id,
+        payload=payload,
+        params=params
+    )
+    response = prediction_client.predict(request=request)
+
+    return response.payload
 
 
 def processPrediction(predictions):
@@ -158,10 +170,16 @@ def processPrediction(predictions):
     return location_of_objects
 
 def resultFormatter(prediction):
-    locations = prediction.bounding_poly.normalized_vertices
+    locations = prediction.image_object_detection.bounding_box.normalized_vertices
+
+    formatted_locations = []
+
+    for vertices in locations.__iter__():
+        formatted_locations.append({"x": vertices.x, "y": vertices.y})
+
     x = []
     y = []
-    
+
     for key in locations:
         if 'x' not in key:
             x.append(0)
@@ -175,10 +193,9 @@ def resultFormatter(prediction):
     centre = {"x": (min(x) + max(x)) / 2, "y": (min(y) + max(y)) / 2}
 
     return {
-        "name": prediction.name,
-        "location_boundary": locations,
-        "score": prediction.score,
-        "mid": prediction.mid,
+        "name": prediction.display_name,
+        "location_boundary": formatted_locations,
+        "score": prediction.image_object_detection.score,
         "centre_point": centre
     }
 
