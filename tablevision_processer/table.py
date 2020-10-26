@@ -48,6 +48,11 @@ class Table:
             session = Session.objects.get(sessionId=self.session_id)
             current_states = self.states
             session.update(set__states=current_states)
+
+            # update the table state
+            table_object = Table.objects.get(table=self.table_id)
+            current_state = self.states[-1]
+            table_object.update(set__state=current_state)
             return
 
         if session_status == "start":
@@ -61,6 +66,11 @@ class Table:
             )
             session.save()
 
+            # update the table state
+            table_object = Table.objects.get(table=self.table_id)
+            current_state = self.states[-1]
+            table_object.update(set__state=current_state)
+
             return
 
         if session_status == "end":
@@ -70,6 +80,11 @@ class Table:
             current_states = self.states
             session.update(set__states=current_states, set__sessionEnd = self.session_end)
             self.reset_session()
+
+            # update the table state
+            table_object = Table.objects.get(table=self.table_id)
+            current_state = self.states[-1]
+            table_object.update(set__state=current_state)
             return
         
         return
@@ -121,7 +136,7 @@ class Table:
         # KIVVVVVV
         time_now = datetime.now() + timedelta(hours=8)
         time_difference = time_now - self.session_start
-        return time_difference.total_seconds() >= 18
+        return time_difference.total_seconds() >= 180
 
 
     def within_coordinates(self, x, y):
