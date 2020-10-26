@@ -86,6 +86,8 @@ class Table:
             
             # after session start
             # anything to 0
+            elif last_state == 0 and new_state == 1:
+                return
             else:
                 # anything to 0
                 if new_state == 0:
@@ -115,11 +117,11 @@ class Table:
                     else: # if not valid
                         return
 
-    def is_valid_session():
+    def is_valid_session(self):
         # KIVVVVVV
         time_now = datetime.now() + timedelta(hours=8)
-        time_difference = time_now - self.start_session
-        return time_difference.total_seconds() >= 180
+        time_difference = time_now - self.session_start
+        return time_difference.total_seconds() >= 18
 
 
     def within_coordinates(self, x, y):
