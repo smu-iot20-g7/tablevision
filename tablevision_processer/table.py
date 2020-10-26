@@ -76,33 +76,51 @@ class Table:
         
 
     def did_change_state(self, new_state):
-        # print("current state", self.print_states())
-        # print("trying to change in table.py", new_state)
         last_state = self.states[-1]
 
         if new_state != last_state:
-            # print("not the same state")
-            # print(new_state)
-            # print(last_state)
-            # A to XX
-            if last_state == 0:
-                # print("A to XX")
+            # 0 to 2
+            if last_state == 0 and new_state == 2:
                 self.start_session(new_state)
                 self.update_db('start')
             
-            # not A to XX
+            # after session start
+            # anything to 0
             else:
-                # XX to A
+                # anything to 0
                 if new_state == 0:
-                    # print("XX to A")
-                    self.end_session()
-                    self.update_db('end')
+                    if self.is_valid_session():
+                        self.end_session()
+                        self.update_db('end')
+                    else:
+                        return
 
-                # XX to XX
+                # anything 1 to 2, or 2 to 1
                 else:
-                    # print("XX to XX")
-                    self.states.append(new_state)
-                    self.update_db()
+                    if self.is_valid_session():
+                        # means from 1 to 2, high chance means that
+                        # someone left and the person immediately joins
+                        # this is 1 - 2
+                        if new_state == 2:
+                            self.end_session()
+                            self.update_db('end')
+
+                            # new session for the fast guy
+                            self.reset_session()
+                            self.start_session(new_state)
+                            self.update_db('start')
+                        else: # this is 2 - 1
+                            self.states.append(new_state)
+                            self.update_db()
+                    else: # if not valid
+                        return
+
+    def is_valid_session():
+        # KIVVVVVV
+        time_now = datetime.now() + timedelta(hours=8)
+        time_difference = time_now - self.start_session
+        return time_difference.total_seconds() >= 180
+
 
     def within_coordinates(self, x, y):
         bl_x, bl_y = self.coords[2][0], self.coords[2][1]
