@@ -117,8 +117,8 @@ def process():
         return jsonify({"type": "error", "debug": str(e)}), 500
 
 def makeGoogleRequest(image):
-    project_id = 'iot-grp7-vision'
-    model_id = 'IOD6111580407411507200'
+    project_id = '1090553409589'
+    model_id = 'IOD9064252913106288640'
 
     # Get the full path of the model.
     model_full_id = automl.AutoMlClient.model_path(
