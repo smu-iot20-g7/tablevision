@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 import uuid
 from mongoengine import connect
-from models import *
+from models import Table as TableMongo
+from models import Session
 
 connect("iot", host="mongodb+srv://root:0NqePorN2WDm7xYc@cluster0.fvp4p.mongodb.net/iot?retryWrites=true&w=majority")
 
@@ -50,7 +51,7 @@ class Table:
             session.update(set__states=current_states)
 
             # update the table state
-            table_object = Table.objects.get(table=self.table_id)
+            table_object = TableMongo.objects.get(table=self.table_id)
             current_state = self.states[-1]
             table_object.update(set__state=current_state)
             return
@@ -67,7 +68,7 @@ class Table:
             session.save()
 
             # update the table state
-            table_object = Table.objects.get(table=self.table_id)
+            table_object = TableMongo.objects.get(table=self.table_id)
             current_state = self.states[-1]
             table_object.update(set__state=current_state)
 
@@ -82,7 +83,7 @@ class Table:
             self.reset_session()
 
             # update the table state
-            table_object = Table.objects.get(table=self.table_id)
+            table_object = TableMongo.objects.get(table=self.table_id)
             current_state = self.states[-1]
             table_object.update(set__state=current_state)
             return
