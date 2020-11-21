@@ -18,7 +18,8 @@ def runCropper():
     prompter = True
 
     while prompter:
-        table_id = input("Enter table ID: ")
+        print()
+        table_id = input("Enter table number: ")
 
         if table_id in tables:
             print("Table exists already!")
@@ -26,13 +27,27 @@ def runCropper():
 
         imageCropper()
 
+        print("===============================")
+        print("Table " + table_id + " plotted!")
+        print("===============================")
+        print()
+
         tables[table_id] = [FIRST, SECOND, THIRD, FOURTH]
 
         want_to_continue = input("Do you want to continue? [Y|N]: ").capitalize()
 
         if want_to_continue != "Y":
             prompter = False
-            print(json.dumps(tables))
+            print()
+            print("Copy the following line into a Terminal window:")
+            print("=========================================")
+            print()
+            print("python3 initialise.py '", end="")
+            print(json.dumps(tables), end="")
+            print("'")
+            print()
+            print("=========================================")
+            print()
             print("Goodbye!")
 
 def onselect(eclick, erelease):
@@ -49,7 +64,8 @@ def onselect(eclick, erelease):
     plt.close()
 
 def imageCropper():
-    print("EH DRAW LEFT TO RIGHT AH DONT STUPID")
+    print("Please annotate the boundary boxes, starting from the top-left to the bottom-right. Thank you :)")
+    print()
 
     global fig, ax, filename, im, arr, plt_image, rs, WIDTH, HEIGHT
 
